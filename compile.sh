@@ -14,3 +14,4 @@ cmake ..
 # Build the project using the default build tool
 cmake --build .
 
+cp myfetch ../

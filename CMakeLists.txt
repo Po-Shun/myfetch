@@ -80,13 +80,12 @@ function(myfetch_encode_c_string STR OUTVAR)
     string(REPLACE "\\" "\\\\" TEMP "${TEMP}")    # Escape backslashes
     string(REPLACE "\n" "\\n" TEMP "${TEMP}")     # Replace newlines with \n
     string(REPLACE "\"" "\\\"" TEMP "${TEMP}")    # Replace quotes with \"
-    # PARENT_SCOPE set the variable in the scope of the calling function. That allows the variable could be accessed outside the func
     set(${OUTVAR} "\"${TEMP}\"" PARENT_SCOPE)
-endfunction(myfetch_encode_c_string FILENAME OUTVAR)
+endfunction(myfetch_encode_c_string)
 
 function(myfetch_load_text FILENAME OUTVAR)
     file(READ "${FILENAME}" TEMP)
-    myfetch_encode_c_string("$(TEMP)" TEMP)
+    myfetch_encode_c_string("${TEMP}" TEMP)
     set(${OUTVAR} "${TEMP}" PARENT_SCOPE)
 endfunction(myfetch_load_text)
 
@@ -96,6 +95,7 @@ file(GLOB LOGO_FILES "src/logo/ascii/*.txt")
 set(LOGO_BUILTIN_H "#pragma once\n#pragma GCC diagnostic ignored \"-Wtrigraphs\"\n\n")
 foreach(file ${LOGO_FILES})
     myfetch_load_text("${file}" content)
+    # message(STATUS ${content})
     get_filename_component(file "${file}" NAME_WE)
     string(TOUPPER "${file}" file)
     string(REGEX REPLACE "\\$\\{c([0-9]+)\\}" "$\\1" content "${content}")
@@ -103,7 +103,15 @@ foreach(file ${LOGO_FILES})
 endforeach()
 file(GENERATE OUTPUT logo_builtin.h CONTENT "${LOGO_BUILTIN_H}")
 
-set(LIBMYFETCH_SRC)
+set(LIBMYFETCH_SRC
+    src/util/strbuf.c
+    src/logo/logo.c
+    src/common/parse.c
+    src/detection/os/os_linux.c 
+    src/detection/os/os.c 
+    src/common/init.c 
+    src/logo/logobuild.c
+)
 
 if(LINUX)
     list(APPEND LIBMYFETCH_SRC)
@@ -111,27 +119,31 @@ endif()
 
 # uncomment below once adding libraries
 
-# add_library(libfastfetch OBJECT
-# ${LIBFASTFETCH_SRC}
-# )
+add_library(libmyfetch OBJECT
+${LIBMYFETCH_SRC}
+)
 
-# if(LINUX)
-#     target_link_libraries(libfastfetch
-#         PRIVATE "m"
-#     )
-# endif()
+if(LINUX)
+    target_link_libraries(libmyfetch
+        PRIVATE "m"
+    )
+endif()
 
-# target_include_directories(libfastfetch
-#     PUBLIC ${PROJECT_BINARY_DIR}
-#     PUBLIC ${PROJECT_SOURCE_DIR}/src
-# )
+target_include_directories(libmyfetch
+    PUBLIC ${PROJECT_BINARY_DIR}
+    PUBLIC ${PROJECT_SOURCE_DIR}/src
+)
 
-# target_link_libraries(libfastfetch
-#     PRIVATE ${CMAKE_DL_LIBS}
-# )
+target_link_libraries(libmyfetch
+    PRIVATE ${CMAKE_DL_LIBS}
+)
 
 add_executable(myfetch
     src/myfetch.c
+)
+
+target_link_libraries(myfetch
+    PRIVATE libmyfetch
 )
 
 # install target
